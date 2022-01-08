@@ -2196,21 +2196,28 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
         
         String refA = "";
         String cusIDA = "";
+        String pmtAmtA = "";
         
         
         String refB = "";
         String cusIDB = "";
+        String pmtAmtB = "";
         
         while(abilaPmtCtr < a.size() && bpPmtCtr < b.size()){
             refA = a.get(abilaPmtCtr).getReferenceNo();
             cusIDA = a.get(abilaPmtCtr).getCustomerNo();
+            pmtAmtA = a.get(abilaPmtCtr).getPmtAmount();
+            
             
         
             refB = b.get(bpPmtCtr).getReferenceNo();
             cusIDB = b.get(bpPmtCtr).getCustomerNo();
-            
+            pmtAmtB = b.get(abilaPmtCtr).getPmtAmount();
+                        
             int compareRefAtoB = refA.compareTo(refB);
             int compareCusAtoB = cusIDA.compareTo(cusIDB);
+            int comparePmtAmtAtoB = pmtAmtA.compareTo(pmtAmtB);
+            boolean compareAppliedAtoB = comparePmtApplied(a.get(abilaPmtCtr), b.get(bpPmtCtr));
             
             //boolean test = b.get(bpPmtCtr).getPmtMethod().equals("AbilaPMT");
             
@@ -2218,8 +2225,14 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
             if(compareRefAtoB == 0){
                 if(compareCusAtoB == 0){
                     //The Payment is in both Bill and Pay and Abila. 
-                    bpPmtCtr++;
-                    abilaPmtCtr++;
+                    if(comparePmtAmtAtoB == 0 && compareAppliedAtoB == true){ //check if payment amount or applied amounts are the same
+                        //payments are exactly the same an no change is needed
+                        bpPmtCtr++;
+                        abilaPmtCtr++;
+                    }else{
+                        
+                    }
+                    
                 }else if(compareCusAtoB < 0){
                     //Abila's Payment is not in Bill and Pay.
                     if(a.get(abilaPmtCtr).getPmtSessionNum().startsWith("BPSYNC")){ 
@@ -2279,6 +2292,26 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
         
         intermediateJTextArea.append("A total of " + MainFrame.paymentsToAddToAbila.size() + " Payments need to be added to Abila...\n");        
         intermediateJTextArea.append("A total of " + MainFrame.paymentsToAddToBillandPay.size() + " Payments need to be added to Bill and Pay...\n");   
+    }
+    
+    private boolean comparePmtApplied(Payment abilaPayment, Payment bpPayment){
+        //compare total applied
+        if(abilaPayment.getAppliedTo().size() == abilaPayment.getAppliedTo().size()){ //first check if total applied invoices is the same
+            for(int i = 0; i < abilaPayment.getAppliedTo().size(); i++){//iterate through all applied invoices and amounts
+                if(abilaPayment.getAppliedTo().get(i).getReferenceNumber().compareTo(bpPayment.getAppliedTo().get(i).getReferenceNumber()) == 0){
+                    if(abilaPayment.getAppliedAmount().get(i).compareTo(bpPayment.getAppliedAmount().get(i)) == 0){
+                        //go to the next invoice because this one is the same.
+                    }else{
+                        return false;
+                    }
+                }else{
+                    return false;
+                }
+            }
+        }else{
+            return false;      
+        }
+        return true;
     }
     
     private String buildAbilaInsertSession(String transType, String ssnDesc){
