@@ -24,7 +24,7 @@ public class Payment {
     private String fund;    
     private ArrayList<Invoice> appliedTo;
     private ArrayList<String> appliedAmount;
-    private String bpLastUpdate;
+    private String lastUpdate;
 
     public Payment(String pmtDate, String pmtMethod, String pmtAmount, String customerNo, String customerName, String referenceNo, ArrayList<Invoice> appliedTo, ArrayList<String> appliedAmount, String lastUpdate) {
         this.pmtDate = pmtDate;
@@ -35,7 +35,7 @@ public class Payment {
         this.referenceNo = referenceNo;
         this.appliedTo = appliedTo;
         this.appliedAmount = appliedAmount;
-        this.bpLastUpdate = lastUpdate;
+        this.lastUpdate = lastUpdate;
     }  
     
     public Payment(String pmtDate, String id, String pmtAmount, String customerNo, ArrayList<Invoice> appliedTo, ArrayList<String> appliedAmount) {
@@ -47,8 +47,9 @@ public class Payment {
         this.appliedAmount = appliedAmount;
     }
 
-    public Payment(ArrayList<Invoice> appliedTo, ArrayList<String> appliedAmount, String pmtDate, String id, String pmtAmount, String customerNo, String referenceNo, String fund, String method, String session) {
+    public Payment(ArrayList<Invoice> appliedTo, ArrayList<String> appliedAmount, String pmtDate, String lastUpdate, String id, String pmtAmount, String customerNo, String referenceNo, String fund, String method, String session) {
         this.pmtDate = pmtDate;
+        this.lastUpdate = lastUpdate;
         this.id = id;
         this.pmtAmount = pmtAmount;
         this.customerNo = customerNo;
@@ -65,7 +66,7 @@ public class Payment {
         this.customerNo = customerNo;
         this.pmtAmount = pmtAmt;
         this.pmtDate = pmtDate;
-        this.bpLastUpdate = lastUpdate;
+        this.lastUpdate = lastUpdate;
     }
     
     public Payment() {
@@ -124,8 +125,8 @@ public class Payment {
         return fund;
     }
 
-    public String getBpLastUpdate() {
-        return bpLastUpdate;
+    public String getLastUpdate() {
+        return lastUpdate;
     }
     
     

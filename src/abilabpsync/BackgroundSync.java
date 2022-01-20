@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
-import javafx.scene.paint.Color;
+//import javafx.scene.paint.Color;
 import static org.apache.commons.lang3.StringUtils.left;
 import static org.apache.commons.lang3.StringUtils.length;
 import static org.apache.commons.lang3.StringUtils.right;
@@ -755,8 +755,8 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                 setProgress(percentage);
                 
                 insertReturnedPayments(p.getCustomerNo(), p.getReferenceNo(), p.getPmtAmount());
-                if(lastUpdated.compareTo(p.getBpLastUpdate()) < 0){
-                    lastUpdated = p.getBpLastUpdate();
+                if(lastUpdated.compareTo(p.getLastUpdate()) < 0){
+                    lastUpdated = p.getLastUpdate();
                 }
             }else{
                 intermediateJTextArea.append("Sync process cancelled...\n");
@@ -1866,6 +1866,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                                                             "Select * from(SELECT dbo.tbldltrans.[dDocID] as pmtID\n" +
                                                             "                    ,dbo.tbldltrans.[sOrigDocNum] as pmtReferenceNo\n" +
                                                             "                    ,max(dbo.tbldltrans.[dtmPostTo]) as pmtDate\n" +
+                                                            "                    ,max(dbo.tbldldocument.[dtmModified]) as modDate\n" +
                                                             "                    ,sum(cast(round(dbo.tbldltrans.[curAmount],2) as numeric(36,2)) * -1) as pmtAmount\n" +
                                                             "                    ,dbo.tbldltrans.[sMatchDocNum] as appliedToRefNo\n" +
                                                             "                    ,dbo.tbldltrans.[dMatchDocIDf] as appliedToID\n" +
@@ -1878,7 +1879,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                                                             "                on dbo.tblDLDocument.ctrDocID = dbo.tblDLTrans.dDocID\n" +
                                                             "                inner join dbo.tblARCustomer\n" +
                                                             "                on dbo.tblDLDocument.sPlayerNumIDf = dbo.tblARCustomer.sCustomerID\n" +
-                                                            "                where sOrigTransSourceIDf in ('ARC','ARM') and sInvSrcCurrencyIDf != '' and sMatchTransSourceIDf != 'ARP' and dbo.tblDLDocument.dtmPosted > @LastUpdate and LEFT(dbo.tblDLTrans.sOrigSessionNumIDf,6) != 'BPSYNC' and dbo.tbldltrans.curAmount < 0 " + whereClause + "\n" +
+                                                            "                where sOrigTransSourceIDf in ('ARC','ARM') and sInvSrcCurrencyIDf != '' and sMatchTransSourceIDf != 'ARP' and dbo.tblDLDocument.dtmPosted > @LastUpdate and LEFT(dbo.tblDLTrans.sOrigSessionNumIDf,6) != 'BPSYNC' and dbo.tbldltrans.[curAmount] < 0 " + whereClause + "\n" +
                                                             "                group by dbo.tbldltrans.[dDocID], dbo.tbldltrans.[sOrigDocNum], dbo.tbldltrans.[sMatchDocNum], dbo.tbldltrans.[dMatchDocIDf], dbo.tblARCustomer.sCustomerID, dbo.tblDLDocument.sPayMethod, dbo.tblDLDocument.sSessionNumIDf\n" +
                                                             "                ) as A\n" +
                                                             "                UNION \n" +
@@ -1886,6 +1887,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                                                             "                from(SELECT dbo.tbltetrans.[dDocID] as pmtID\n" +
                                                             "                    ,dbo.tbltetrans.[sOrigDocNum] as pmtReferenceNo\n" +
                                                             "                    ,max(dbo.tbltetrans.[dtmPostTo]) as pmtDate\n" +
+                                                            "                    ,max(dbo.tbltedocument.[dtmModified]) as modDate\n" +
                                                             "                    ,sum(cast(round(dbo.tbltetrans.[curAmount],2) as numeric(36,2)) * -1) as pmtAmount\n" +
                                                             "                    ,dbo.tbltetrans.[sMatchDocNum] as appliedToRefNo\n" +
                                                             "                    ,dbo.tbltetrans.[dMatchDocIDf] as appliedToID\n" +
@@ -1915,6 +1917,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                                                             "Select * from(SELECT dbo.tbldltrans.[dDocID] as pmtID\n" +
                                                             "                    ,dbo.tbldltrans.[sOrigDocNum] as pmtReferenceNo\n" +
                                                             "                    ,max(dbo.tbldltrans.[dtmPostTo]) as pmtDate\n" +
+                                                            "                    ,max(dbo.tbldldocument.[dtmModified]) as modDate\n" +
                                                             "                    ,sum(cast(round(dbo.tbldltrans.[curAmount],2) as numeric(36,2)) * -1) as pmtAmount\n" +
                                                             "                    ,dbo.tbldltrans.[sMatchDocNum] as appliedToRefNo\n" +
                                                             "                    ,dbo.tbldltrans.[dMatchDocIDf] as appliedToID\n" +
@@ -1935,6 +1938,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                                                             "                from(SELECT dbo.tbltetrans.[dDocID] as pmtID\n" +
                                                             "                    ,dbo.tbltetrans.[sOrigDocNum] as pmtReferenceNo\n" +
                                                             "                    ,max(dbo.tbltetrans.[dtmPostTo]) as pmtDate\n" +
+                                                            "                    ,max(dbo.tbltedocument.[dtmModified]) as modDate\n" +
                                                             "                    ,sum(cast(round(dbo.tbltetrans.[curAmount],2) as numeric(36,2)) * -1) as pmtAmount\n" +
                                                             "                    ,dbo.tbltetrans.[sMatchDocNum] as appliedToRefNo\n" +
                                                             "                    ,dbo.tbltetrans.[dMatchDocIDf] as appliedToID\n" +
@@ -2044,12 +2048,13 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
             String newCusNo = "";
             ArrayList<Invoice> appliedInvoices = new ArrayList<Invoice>();
             ArrayList<String> appliedAmt = new ArrayList<String>();
-            double paymentAmount = 0;
+            double paymentAmount = 0.00;
             String fund = "";
             String pmtMethod = "";
             String pmtSessionNum = "";
             
             String pmtdt = "";
+            String pmtLastUpdate = "";
             String id = "";
             
             String appliedToRef = "";
@@ -2081,7 +2086,8 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                 }else{
                     //Add previous payment to abilaPayments   
                     if(ctr != 0){
-                        Payment pmt = new Payment(new ArrayList<Invoice>(appliedInvoices), new ArrayList<String>(appliedAmt), pmtdt, id, Double.toString(paymentAmount), curCusNo, curRefNo, fund, pmtMethod, pmtSessionNum);
+                        //Double.toString(paymentAmount)
+                        Payment pmt = new Payment(new ArrayList<Invoice>(appliedInvoices), new ArrayList<String>(appliedAmt), pmtdt, pmtLastUpdate, id, String.format("%.2f", paymentAmount), curCusNo, curRefNo, fund, pmtMethod, pmtSessionNum);
                         MainFrame.abilaPayments.add(pmt);
                     }                    
                 
@@ -2092,6 +2098,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                     appliedInvoices.clear();
                     appliedAmt.clear();
                     pmtdt = abilaPaymentsResultSet.getString("pmtDate");
+                    pmtLastUpdate = abilaPaymentsResultSet.getString("modDate");
                     id = abilaPaymentsResultSet.getString("pmtId");
                     paymentAmount = Double.valueOf(abilaPaymentsResultSet.getString("pmtAmount"));
                     //fund = abilaPaymentsResultSet.getString("fund");
@@ -2121,7 +2128,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
             }
             
             if(ctr != 0){
-                Payment pmt = new Payment(new ArrayList<Invoice>(appliedInvoices), new ArrayList<String>(appliedAmt), pmtdt, id, Double.toString(paymentAmount), curCusNo, curRefNo, fund, pmtMethod, pmtSessionNum);
+                Payment pmt = new Payment(new ArrayList<Invoice>(appliedInvoices), new ArrayList<String>(appliedAmt), pmtdt, pmtLastUpdate, id, Double.toString(paymentAmount), curCusNo, curRefNo, fund, pmtMethod, pmtSessionNum);
                 MainFrame.abilaPayments.add(pmt);
             }
             
@@ -2215,22 +2222,30 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
             pmtAmtB = b.get(abilaPmtCtr).getPmtAmount();
                         
             int compareRefAtoB = refA.compareTo(refB);
-            int compareCusAtoB = cusIDA.compareTo(cusIDB);
+            
             int comparePmtAmtAtoB = pmtAmtA.compareTo(pmtAmtB);
-            boolean compareAppliedAtoB = comparePmtApplied(a.get(abilaPmtCtr), b.get(bpPmtCtr));
+            
             
             //boolean test = b.get(bpPmtCtr).getPmtMethod().equals("AbilaPMT");
             
             
             if(compareRefAtoB == 0){
-                if(compareCusAtoB == 0){
-                    //The Payment is in both Bill and Pay and Abila. 
+                int compareCusAtoB = cusIDA.compareTo(cusIDB); //Reference Number is the same; proceed to compare if the customer is the same
+                if(compareCusAtoB == 0){ //Comparing if customer is the same
+                    boolean compareAppliedAtoB = comparePmtApplied(a.get(abilaPmtCtr), b.get(bpPmtCtr)); //The Payment is in both Bill and Pay and Abila. Proceed to compare if the total payment and applied amounts are the same
                     if(comparePmtAmtAtoB == 0 && compareAppliedAtoB == true){ //check if payment amount or applied amounts are the same
                         //payments are exactly the same an no change is needed
                         bpPmtCtr++;
                         abilaPmtCtr++;
                     }else{
-                        
+                        if(a.get(abilaPmtCtr).getLastUpdate().compareTo(b.get(bpPmtCtr).getLastUpdate()) < 0){
+                            MainFrame.paymentsToUpdateInAbila.add(b.get(bpPmtCtr));
+                        }else{
+                            MainFrame.paymentsToUpdateInBillandPay.add(a.get(abilaPmtCtr));
+
+                        }
+                        bpPmtCtr++;
+                        abilaPmtCtr++;
                     }
                     
                 }else if(compareCusAtoB < 0){
@@ -2296,7 +2311,7 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
     
     private boolean comparePmtApplied(Payment abilaPayment, Payment bpPayment){
         //compare total applied
-        if(abilaPayment.getAppliedTo().size() == abilaPayment.getAppliedTo().size()){ //first check if total applied invoices is the same
+        if(abilaPayment.getAppliedTo().size() == bpPayment.getAppliedTo().size()){ //first check if total count of applied invoices is the same
             for(int i = 0; i < abilaPayment.getAppliedTo().size(); i++){//iterate through all applied invoices and amounts
                 if(abilaPayment.getAppliedTo().get(i).getReferenceNumber().compareTo(bpPayment.getAppliedTo().get(i).getReferenceNumber()) == 0){
                     if(abilaPayment.getAppliedAmount().get(i).compareTo(bpPayment.getAppliedAmount().get(i)) == 0){
@@ -2419,10 +2434,10 @@ public class BackgroundSync extends SwingWorker<Integer, Integer>{
                 pmtDate = p.getPmtDate();
                 PmtAmount = p.getPmtAmount();
                 
-                String test = p.getBpLastUpdate();
+                String test = p.getLastUpdate();
                 
-                if(lastUpdated.compareTo(p.getBpLastUpdate()) < 0){
-                    lastUpdated = p.getBpLastUpdate();
+                if(lastUpdated.compareTo(p.getLastUpdate()) < 0){
+                    lastUpdated = p.getLastUpdate();
                 }
 
                 MainFrame.progressBarLabels.setText("Adding Payment "+forCount+" of "+paymentsToAdd.size()+" to Abila");

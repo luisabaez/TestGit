@@ -66,6 +66,8 @@ public class MainFrame extends javax.swing.JFrame implements ActionListener {
     public static ArrayList<Payment> abilaPayments = new ArrayList<Payment>();
     public static ArrayList<Payment> paymentsToAddToAbila = new ArrayList<Payment>();
     public static ArrayList<Payment> paymentsToAddToBillandPay = new ArrayList<Payment>();
+    public static ArrayList<Payment> paymentsToUpdateInAbila = new ArrayList<Payment>();
+    public static ArrayList<Payment> paymentsToUpdateInBillandPay = new ArrayList<Payment>();
     String DATABASE_URL = null;
     String SERVER_NAME = null;
     String DATABASE_NAME = null;
